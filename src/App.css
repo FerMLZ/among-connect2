@@ -1,0 +1,39 @@
+.container {
+  padding: 20px;
+  max-width: 600px;
+  margin: auto;
+}
+.task-list {
+  list-style: none;
+  padding: 0;
+}
+.task-list li {
+  display: flex;
+  justify-content: space-between;
+  background: #161b22;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+}
+.task-list li.done {
+  text-decoration: line-through;
+  background: #1f6feb;
+}
+button {
+  background: #238636;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.progress {
+  background: #30363d;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+.bar {
+  height: 20px;
+  background: #2ea043;
+}
