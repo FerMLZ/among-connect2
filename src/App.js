@@ -1,50 +1,85 @@
-import React, { useEffect, useState } from 'react';
-import { db } from './firebase';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import "./App.css";
+import { collection, updateDoc, doc, onSnapshot } from "firebase/firestore";
+import { db } from "./firebaseConfig";
 
-function App() {
-  const [tasks, setTasks] = useState([]);
+export default function App() {
+  const [tarefas, setTarefas] = useState([]);
 
+  // Carrega as tarefas do Firestore
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'tasks'), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setTasks(data);
+    const tarefasRef = collection(db, "tarefas");
+  
+    const unsubscribe = onSnapshot(tarefasRef, (snapshot) => {
+      const dados = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        titulo: doc.data().titulo,
+        status: doc.data().status,
+      }));
+      console.log("Tarefas atualizadas:", dados);
+      setTarefas(dados);
     });
-    return () => unsub();
+  
+    return () => unsubscribe(); // importante para limpar o listener quando sair da tela
   }, []);
+  
 
-  const handleComplete = async (taskId, completed) => {
-    const taskRef = doc(db, 'tasks', taskId);
-    await updateDoc(taskRef, { status: completed ? 'Concluído' : 'Pendente' });
+  // Alterna o status da tarefa no Firestore
+  const toggleConcluida = async (id, statusAtual) => {
+    const novaStatus = statusAtual === "Concluído" ? "Pendente" : "Concluído";
+    const tarefaRef = doc(db, "tarefas", id);
 
-    const audio = new Audio('/complete.mp3');
-    audio.play();
+    await updateDoc(tarefaRef, { status: novaStatus });
+
+    // Atualiza a interface depois da alteração
+    setTarefas((prev) =>
+      prev.map((tarefa) =>
+        tarefa.id === id ? { ...tarefa, status: novaStatus } : tarefa
+      )
+    );
   };
 
-  const completedCount = tasks.filter(task => task.status === 'Concluído').length;
+  const resetarTarefas = async () => {
+    for (const tarefa of tarefas) {
+      const tarefaRef = doc(db, "tarefas", tarefa.id);
+      await updateDoc(tarefaRef, { status: "Pendente" });
+    }
+
+    setTarefas((prev) =>
+      prev.map((tarefa) => ({ ...tarefa, status: "Pendente" }))
+    );
+  };
+
+  const total = tarefas.length;
+  const concluidasCount = tarefas.filter(t => t.status === "Concluído").length;
+  const progresso = total > 0 ? Math.round((concluidasCount / total) * 100) : 0;
 
   return (
     <div className="container">
       <h1>Connect + 1ª Edição Among</h1>
-      <div className="progress">
-        <div
-          className="bar"
-          style={{ width: `${(completedCount / tasks.length) * 100}%` }}
-        ></div>
+
+      <div className="progress-container">
+        <p>✔️ {concluidasCount} de {total} tarefas concluídas ({progresso}%)</p>
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{ width: `${progresso}%` }} />
+        </div>
       </div>
-      <ul className="task-list">
-        {tasks.map((task) => (
-          <li key={task.id} className={task.status === 'Concluído' ? 'done' : ''}>
-            <span>{task.name}</span>
-            <button onClick={() => handleComplete(task.id, task.status !== 'Concluído')}>
-              {task.status === 'Concluído' ? 'Desfazer' : 'Concluir'}
-            </button>
-          </li>
+
+      <div className="task-grid">
+        {tarefas.map((tarefa) => (
+          <button
+            key={tarefa.id}
+            className={`task-button ${tarefa.status === "Concluído" ? "completed" : ""}`}
+            onClick={() => toggleConcluida(tarefa.id, tarefa.status)}
+          >
+            {tarefa.titulo} - {tarefa.status}
+          </button>
         ))}
-      </ul>
+      </div>
+
+      <button className="reset-button" onClick={resetarTarefas}>
+        Resetar Tarefas
+      </button>
     </div>
   );
 }
-
-export default App;
